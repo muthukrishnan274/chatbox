@@ -1,0 +1,323 @@
+!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ chatbot_title }}</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --text: #172033;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --user: #2563eb;
+      --assistant: #f1f5f9;
+      --danger: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .app {
+      width: min(100%, 980px);
+      height: 100vh;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      background: var(--panel);
+      box-shadow: 0 0 30px rgba(15, 23, 42, .07);
+    }
+    header {
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      background: rgba(255,255,255,.96);
+    }
+    .logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 13px;
+      display: grid;
+      place-items: center;
+      background: var(--primary);
+      color: white;
+      font-weight: 800;
+      font-size: 20px;
+    }
+    .header-text h1 { margin: 0; font-size: 18px; }
+    .header-text p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
+    #chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 26px 18px;
+      scroll-behavior: smooth;
+    }
+    .empty {
+      min-height: 100%;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 30px;
+    }
+    .empty-card { max-width: 600px; }
+    .empty-icon {
+      width: 62px; height: 62px; margin: 0 auto 16px;
+      border-radius: 20px; display: grid; place-items: center;
+      background: #dbeafe; color: var(--primary);
+      font-size: 27px; font-weight: 800;
+    }
+    .empty h2 { margin: 0 0 8px; font-size: 27px; }
+    .empty p { margin: 0; color: var(--muted); line-height: 1.6; }
+    .message-row {
+      display: flex;
+      margin: 0 auto 18px;
+      width: min(100%, 820px);
+    }
+    .message-row.user { justify-content: flex-end; }
+    .bubble {
+      max-width: min(78%, 700px);
+      padding: 12px 15px;
+      border-radius: 18px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .user .bubble {
+      background: var(--user);
+      color: white;
+      border-bottom-right-radius: 5px;
+    }
+    .assistant .bubble {
+      background: var(--assistant);
+      color: var(--text);
+      border-bottom-left-radius: 5px;
+    }
+    .composer {
+      padding: 14px 18px 18px;
+      border-top: 1px solid var(--border);
+      background: white;
+    }
+    .composer-inner {
+      width: min(100%, 820px);
+      margin: 0 auto;
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+    textarea {
+      flex: 1;
+      resize: none;
+      min-height: 48px;
+      max-height: 150px;
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      padding: 13px 15px;
+      font: inherit;
+      outline: none;
+      color: var(--text);
+    }
+    textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+    }
+    button {
+      border: 0;
+      border-radius: 13px;
+      min-width: 48px;
+      height: 48px;
+      background: var(--primary);
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:hover { background: var(--primary-dark); }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    .typing {
+      width: min(100%, 820px);
+      margin: 0 auto 15px;
+      color: var(--muted);
+      font-size: 13px;
+      display: none;
+    }
+    .typing span {
+      display: inline-block;
+      width: 6px; height: 6px; border-radius: 50%;
+      background: currentColor;
+      margin: 0 2px;
+      animation: blink 1s infinite ease-in-out;
+    }
+    .typing span:nth-child(2) { animation-delay: .15s; }
+    .typing span:nth-child(3) { animation-delay: .3s; }
+    @keyframes blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+    .error {
+      width: min(100%, 820px);
+      margin: 0 auto 10px;
+      color: var(--danger);
+      font-size: 13px;
+      display: none;
+    }
+    @media (max-width: 640px) {
+      header { padding: 15px; }
+      #chat { padding: 18px 12px; }
+      .composer { padding: 10px 12px 13px; }
+      .bubble { max-width: 88%; }
+      .empty h2 { font-size: 23px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div class="logo">+</div>
+      <div class="header-text">
+        <h1 id="chatbot-title">{{ chatbot_title }}</h1>
+        <p>Domain-focused AI assistant</p>
+      </div>
+    </header>
+
+    <section id="chat" aria-live="polite">
+      <div class="empty" id="empty-state">
+        <div class="empty-card">
+          <div class="empty-icon">+</div>
+          <h2>How can I help?</h2>
+          <p>Ask a question related to {{ chatbot_title }}. Follow-up questions can refer to earlier messages in this conversation.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="typing" id="typing" aria-label="Assistant is typing">
+      Assistant is typing <span></span><span></span><span></span>
+    </div>
+    <div class="error" id="error"></div>
+
+    <form class="composer" id="composer">
+      <div class="composer-inner">
+        <textarea id="message" rows="1" maxlength="4000" placeholder="Type your message..." aria-label="Message"></textarea>
+        <button id="send" type="submit" aria-label="Send">➤</button>
+      </div>
+    </form>
+  </main>
+
+  <script>
+    const chat = document.getElementById("chat");
+    const emptyState = document.getElementById("empty-state");
+    const composer = document.getElementById("composer");
+    const input = document.getElementById("message");
+    const sendButton = document.getElementById("send");
+    const typing = document.getElementById("typing");
+    const errorBox = document.getElementById("error");
+
+    let history = [];
+    let busy = false;
+
+    function addMessage(role, content) {
+      if (emptyState) emptyState.style.display = "none";
+
+      const row = document.createElement("div");
+      row.className = `message-row ${role}`;
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.textContent = content;
+
+      row.appendChild(bubble);
+      chat.appendChild(row);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function setBusy(value) {
+      busy = value;
+      sendButton.disabled = value;
+      input.disabled = value;
+      typing.style.display = value ? "block" : "none";
+      if (value) chat.scrollTop = chat.scrollHeight;
+    }
+
+    function showError(message) {
+      errorBox.textContent = message;
+      errorBox.style.display = "block";
+    }
+
+    function clearError() {
+      errorBox.textContent = "";
+      errorBox.style.display = "none";
+    }
+
+    function resizeInput() {
+      input.style.height = "auto";
+      input.style.height = Math.min(input.scrollHeight, 150) + "px";
+    }
+
+    input.addEventListener("input", resizeInput);
+
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        composer.requestSubmit();
+      }
+    });
+
+    composer.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (busy) return;
+
+      const message = input.value.trim();
+      if (!message) return;
+
+      clearError();
+      addMessage("user", message);
+      input.value = "";
+      resizeInput();
+      setBusy(true);
+
+      const historyForRequest = history.map(item => ({
+        role: item.role,
+        content: item.content
+      }));
+
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message,
+            history: historyForRequest
+          })
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data.error || "The request could not be completed.");
+        }
+
+        const reply = typeof data.reply === "string" ? data.reply.trim() : "";
+        if (!reply) throw new Error("The chatbot returned an empty response.");
+
+        addMessage("assistant", reply);
+        history.push({ role: "user", content: message });
+        history.push({ role: "assistant", content: reply });
+
+        // Keep browser memory bounded even if the conversation is very long.
+        if (history.length > 30) {
+          history = history.slice(-30);
+        }
+      } catch (error) {
+        showError(error.message || "Something went wrong. Please try again.");
+      } finally {
+        setBusy(false);
+        input.focus();
+      }
+    });
+  </script>
+</body>
+</html>
